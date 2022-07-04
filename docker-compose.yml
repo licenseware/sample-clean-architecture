@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  web:
+    image: ghcr.io/licenseware/sample-clean-architecture:${SAMPLE_CLEAN_ARCH_IMAGE_TAG:-latest}
+    build:
+      context: .
+    command: uvicorn --host 0.0.0.0 --port 8000 --reload --workers 2 --log-level info main:app
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    volumes:
+      - ".:/service:ro"
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+
+  worker:
+    image: ghcr.io/licenseware/sample-clean-architecture:${SAMPLE_CLEAN_ARCH_IMAGE_TAG:-latest}
+    build:
+      context: .
+    command: watchmedo auto-restart -R -d . -p '*.py' -- celery -A app.workers:app worker -l info -P gevent --concurrency=500 --autoscale 1,10
+    env_file:
+      - .env.docker
+    restart: unless-stopped
+    volumes:
+      - ".:/service:ro"
+
+  dashboard:
+    image: ghcr.io/licenseware/sample-clean-architecture:${SAMPLE_CLEAN_ARCH_IMAGE_TAG:-latest}
+    build:
+      context: .
+    command: watchmedo auto-restart -R -d . -p '*.py' -- celery -A app.workers:app flower --address=0.0.0.0 --port=8000
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    ports:
+      - ${DASHBOARD_PORT:-8010}:8000
+    volumes:
+      - ".:/service:ro"
+
+  mongo:
+    image: mongo:5
+    restart: unless-stopped
+    volumes:
+      - "mongo:/data/db"
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:6-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - "rabbitmq:/var/lib/rabbitmq"
+
+volumes:
+  mongo:
+  rabbitmq:

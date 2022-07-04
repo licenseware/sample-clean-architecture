@@ -1,0 +1,8 @@
+celery[redis,gevent]~=5.2
+faker~=13.14
+fastapi~=0.78
+flower~=1.1
+pydantic[dotenv]~=1.9
+pymongo~=4.1
+uvicorn~=0.18
+watchdog~=2.1
